@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spotify to YouTube Playlist</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #1db954, #191414);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background-color: rgba(0,0,0,0.6);
+      padding: 30px;
+      border-radius: 15px;
+      width: 90%;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      margin-bottom: 15px;
+    }
+    button {
+      background-color: #1db954;
+      color: white;
+      padding: 12px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 5px;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #17a447;
+    }
+    #result {
+      margin-top: 20px;
+      font-size: 16px;
+      min-height: 24px;
+    }
+    .bookmarklet {
+      margin-top: 30px;
+      font-size: 14px;
+      color: #ccc;
+      cursor: pointer;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Spotify ➜ YouTube Playlist Converter</h1>
+    <input id="spotifyInput" type="text" placeholder="Paste Spotify Playlist URL here..." />
+    <input id="playlistName" type="text" placeholder="Paste Playlist Name here..." />
+    <div>
+      <button id="convertBtn">Convert & Create Playlist</button>
+      
+    </div>
+    <div class="bookmarklet">
+      <p>📌 Drag this to your bookmarks bar:</p>
+      <a href="javascript:(async()=>{function wait(ms){return new Promise(r=>setTimeout(r,ms));}function waitForSelector(s,t=5e3){return new Promise((r,j)=>{let e=0,i=100,n=setInterval(()=>{const o=document.querySelector(s);o?(clearInterval(n),r(o)):(e+=i)>t&&(clearInterval(n),j(new Error('Timeout: '+s)))},i);});}try{await wait(2e3);const m=[...document.querySelectorAll('ytd-compact-video-renderer ytd-menu-renderer')][0];if(!m)return;const b=m.querySelector('yt-icon-button button');if(b){b.click(),await wait(1e3);const i=[...document.querySelectorAll('ytd-menu-service-item-renderer yt-formatted-string')],q=i.find(e=>e.textContent.trim().toLowerCase().includes('queue'));if(q){q.click(),await wait(2e3);const s=document.querySelector('button[aria-label=&quot;Save&quot;].yt-spec-button-shape-next');if(s){s.click(),await wait(1500);const n=await waitForSelector('button[aria-label=&quot;New playlist&quot;].yt-spec-button-shape-next--tonal');n.click();const t=await waitForSelector('textarea.ytStandardsTextareaShapeTextarea');t.focus();t.value=document.querySelector('#ytPlaylistName')?.value||'My Custom Playlist';t.dispatchEvent(new Event('input',{bubbles:!0}));const c=await waitForSelector('button[aria-label=&quot;Create&quot;].yt-spec-button-shape-next--filled');c.click();}}}}catch(e){console.error(e);}})();" title="Click then drag me to bookmarks bar">🎯 Auto-Create Playlist</a>
+    </div>
+  </div>
+    <div id="result"></div>
+  </div>
+
+  <script>
+    
+  let ytTab = null;
+
+  async function convertAndOpen() {
+    const url = document.getElementById('spotifyInput').value.trim();
+    if (!url) {
+      alert('Please enter a Spotify playlist URL');
+      return;
+    }
+
+    document.getElementById('result').textContent = 'Converting...';
+
+    try {
+      const response = await fetch(`/api/convert?url=${encodeURIComponent(url)}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        document.getElementById('result').textContent = 'Error: ' + (data.error || 'Unknown error');
+        return;
+      }
+
+      ytTab = window.open(data.playlistUrl, '_blank');
+      document.getElementById('result').textContent = 'YouTube playlist opened in a new tab.';
+    } catch (err) {
+      console.error(err);
+      document.getElementById('result').textContent = 'Failed to convert playlist. See console.';
+    }
+  }
+
+  function updateBookmarkletHref() {
+    const name = document.getElementById('playlistName').value || 'My Custom Playlist';
+    const encodedName = JSON.stringify(name); // to safely embed in JS string
+
+    const code = `(async()=>{function wait(ms){return new Promise(r=>setTimeout(r,ms));}
+    function waitForSelector(s,t=5e3){return new Promise((r,j)=>{let e=0,i=100,n=setInterval(()=>{const o=document.querySelector(s);o?(clearInterval(n),r(o)):(e+=i)>t&&(clearInterval(n),j(new Error('Timeout: '+s)))},i);});}
+    try{await wait(2e3);
+    const m=[...document.querySelectorAll('ytd-compact-video-renderer ytd-menu-renderer')][0];
+    if(!m)return;
+    const b=m.querySelector('yt-icon-button button');
+    if(b){b.click();await wait(1e3);
+    const i=[...document.querySelectorAll('ytd-menu-service-item-renderer yt-formatted-string')],
+    q=i.find(e=>e.textContent.trim().toLowerCase().includes('queue'));
+    if(q){q.click();await wait(2e3);
+    const s=document.querySelector('button[aria-label="Save"].yt-spec-button-shape-next');
+    if(s){s.click();await wait(1500);
+    const n=await waitForSelector('button[aria-label="New playlist"].yt-spec-button-shape-next--tonal');
+    n.click();
+    const t=await waitForSelector('textarea.ytStandardsTextareaShapeTextarea');
+    t.focus();t.value=${encodedName};
+    t.dispatchEvent(new Event('input',{bubbles:!0}));
+    const c=await waitForSelector('button[aria-label="Create"].yt-spec-button-shape-next--filled');
+    c.click();}}}}catch(e){console.error(e);}})();`;
+
+    const bookmarkletLink = document.querySelector('.bookmarklet a');
+    bookmarkletLink.href = 'javascript:' + encodeURIComponent(code);
+  }
+
+  document.getElementById('playlistName').addEventListener('input', updateBookmarkletHref);
+  document.getElementById('convertBtn').addEventListener('click', convertAndOpen);
+  updateBookmarkletHref(); // run initially
+</script>
+
+</body>
+</html>
